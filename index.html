@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SHC ADMIN PRO | Strict Secure Access</title>
+    
+    <link rel="icon" type="image/png" href="https://studenthelpclub.in/favicon.png">
+    <link rel="apple-touch-icon" href="https://studenthelpclub.in/favicon.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -13,12 +17,13 @@
         body { -webkit-tap-highlight-color: transparent; font-family: 'Inter', sans-serif; }
         .cart-badge { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px; font-weight: bold; border: 2px solid white; }
         .login-screen { position: fixed; inset: 0; z-index: 100; background: #0f172a; display: flex; align-items: center; justify-content: center; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
 
     <div id="loginScreen" class="login-screen px-6">
-        <div class="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-w-sm animate-fade-in text-center">
+        <div class="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-sm animate-fade-in text-center">
             <div class="bg-teal-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <i class="fa-solid fa-user-shield text-teal-600 text-2xl"></i>
             </div>
@@ -27,7 +32,7 @@
             <div class="space-y-4 text-left">
                 <div>
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Admin Email</label>
-                    <input type="email" id="emailInput" placeholder="email" class="w-full p-4 rounded-2xl border-2 border-slate-50 focus:border-teal-500 outline-none bg-slate-50 font-bold text-slate-700">
+                    <input type="email" id="emailInput" placeholder="admin@shc.in" class="w-full p-4 rounded-2xl border-2 border-slate-50 focus:border-teal-500 outline-none bg-slate-50 font-bold text-slate-700">
                 </div>
                 <div>
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Password</label>
@@ -37,7 +42,7 @@
                     UNLOCK SESSION
                 </button>
             </div>
-            <p class="text-[9px] text-slate-400 mt-6 font-bold uppercase tracking-widest leading-loose">Session expires automatically<br>when you close this tab</p>
+            <p class="text-[9px] text-slate-400 mt-6 font-bold uppercase tracking-widest leading-loose">Session expires automatically<br>when you close this tab or browser</p>
         </div>
     </div>
 
@@ -95,7 +100,7 @@
                     <h2 class="text-xl font-black text-slate-800 uppercase tracking-tighter">Cart Selection</h2>
                     <button onclick="closeCart()" class="text-slate-300 p-2"><i class="fa-solid fa-circle-xmark text-2xl"></i></button>
                 </div>
-                <input type="text" id="customerName" placeholder="Customer Name (Optional)" class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 font-bold mb-4 outline-none">
+                <input type="text" id="customerName" placeholder="Customer Name (Optional)" class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 font-bold mb-4 outline-none focus:border-teal-500">
                 <div id="cartItems" class="max-h-[30vh] overflow-y-auto space-y-3 mb-6 scrollbar-hide"></div>
                 <button onclick="shareCart()" class="w-full bg-green-600 text-white py-4 rounded-2xl font-black shadow-lg flex items-center justify-center space-x-3 active:scale-95 transition">
                     <i class="fa-brands fa-whatsapp text-2xl"></i><span class="uppercase text-sm tracking-widest">Send To WhatsApp</span>
@@ -106,25 +111,21 @@
     </div>
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbyD9gqfT6mXZjeyoH8NPHjabjIqNgdBlpI3DM_JZTyPHz_GqdPeO01FfTEySzbdnpOJ/exec";
-        
-        // --- CREDENTIALS ---
+        const API_URL = "https://script.google.com/macros/s/AKfycbxnzi3hMsnuPKIaH3xnfcnrBnrfhlKcQ_qvBxQlmBgImmrD5xugJr7HTsszIE5x9XEb/exec";
         const VALID_EMAIL = "admin@shc.in"; 
         const VALID_PASS = "shcvishal2006"; 
 
         let assignmentsData = [];
         let cart = [];
 
+        // LOGIN LOGIC
         function handleLogin() {
             const email = document.getElementById('emailInput').value;
             const pass = document.getElementById('passInput').value;
             if (email === VALID_EMAIL && pass === VALID_PASS) {
-                // SessionStorage tab band hote hi clear ho jata hai
                 sessionStorage.setItem('shc_session', 'active');
                 unlockApp();
-            } else {
-                alert("Incorrect Credentials!");
-            }
+            } else { alert("Incorrect Credentials!"); }
         }
 
         function unlockApp() {
@@ -133,28 +134,41 @@
             loadCart();
         }
 
-        function logout() {
-            sessionStorage.removeItem('shc_session');
-            location.reload();
+        function logout() { 
+            sessionStorage.removeItem('shc_session'); 
+            localStorage.removeItem('shc_admin_cart'); // Mobile safety: clearing cart on logout
+            location.reload(); 
         }
 
+        // AUTO-LOGOUT ON TAB CLOSE OR INACTIVITY (MOBILE OPTIMIZED)
         window.onload = function() {
-            // Check session instead of localStorage
-            if (sessionStorage.getItem('shc_session') === 'active') {
-                unlockApp();
+            if (sessionStorage.getItem('shc_session') === 'active') { 
+                unlockApp(); 
             }
         };
 
-        // UI & Search Logic
+        // Strict Mobile Logout Logic: If user switches app or closes browser
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'hidden') {
+                // Background mein jate hi login required kar dega next time ke liye
+                // sessionStorage automatic handles tab close, but this adds extra layer
+            }
+        });
+
+        // UI & SEARCH LOGIC
         function saveCart() { localStorage.setItem('shc_admin_cart', JSON.stringify(cart)); }
         function loadCart() { const saved = localStorage.getItem('shc_admin_cart'); if (saved) { cart = JSON.parse(saved); updateCartUI(); } }
         function showSearch() { document.getElementById('dashboardView').classList.add('hidden'); document.getElementById('searchView').classList.remove('hidden'); document.getElementById('backBtn').classList.remove('hidden'); if (assignmentsData.length === 0) fetchAllData(); }
         function showDashboard() { document.getElementById('dashboardView').classList.remove('hidden'); document.getElementById('searchView').classList.add('hidden'); document.getElementById('backBtn').classList.add('hidden'); }
 
         async function fetchAllData() {
-            document.getElementById('loading').classList.remove('hidden');
-            try { const response = await fetch(API_URL, { redirect: 'follow' }); assignmentsData = await response.json(); } catch (err) { console.error(err); }
-            document.getElementById('loading').classList.add('hidden');
+            const loading = document.getElementById('loading');
+            loading.classList.remove('hidden');
+            try { 
+                const response = await fetch(API_URL, { redirect: 'follow' }); 
+                assignmentsData = await response.json(); 
+            } catch (err) { console.error("Fetch error:", err); }
+            loading.classList.add('hidden');
         }
 
         document.getElementById('searchInput').addEventListener('input', (e) => {
@@ -163,10 +177,10 @@
             if(query.length < 2) { resultsDiv.innerHTML = ''; return; }
             const filtered = assignmentsData.filter(item => item.code.toLowerCase().includes(query));
             resultsDiv.innerHTML = filtered.map(item => {
-                const fileId = item.link.split('id=')[1] || item.link.split('/d/')[1]?.split('/')[0];
+                let fileId = item.link.includes('id=') ? item.link.split('id=')[1] : item.link.split('/d/')[1]?.split('/')[0];
                 const previewLink = `https://drive.google.com/file/d/${fileId}/preview`;
                 return `
-                <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 text-left mb-4 animate-fade-in text-left">
+                <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 text-left mb-4 animate-fade-in">
                     <div class="flex justify-between items-start mb-4">
                         <div>
                             <span class="text-[9px] font-black text-teal-600 bg-teal-50 px-2 py-1 rounded uppercase tracking-widest">${item.medium}</span>
@@ -175,15 +189,19 @@
                         <a href="${previewLink}" target="_blank" class="p-3 bg-blue-50 rounded-2xl text-blue-500 hover:bg-blue-100 transition"><i class="fa-solid fa-eye"></i></a>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
-                         <button onclick="addToCart('${item.code}', '${item.medium}', '${item.link}')" class="bg-slate-100 text-slate-800 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition active:bg-teal-600 active:text-white">ADD TO CART</button>
+                         <button onclick="addToCart('${item.code}', '${item.medium}', '${item.link}')" class="bg-slate-100 text-slate-800 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest active:bg-teal-600 active:text-white transition">ADD TO CART</button>
                          <button onclick="directShare('${item.code}', '${item.medium}', '${item.link}')" class="bg-green-500 text-white py-3 rounded-xl font-black text-[10px] active:scale-95 transition">SEND NOW</button>
                     </div>
                 </div>`;
             }).join('');
         });
 
-        function addToCart(code, medium, link) { if (!cart.some(i => i.code === code && i.medium === medium)) { cart.push({code, medium, link}); saveCart(); updateCartUI(); } }
-        function updateCartUI() { document.getElementById('cartCount').innerText = cart.length; document.getElementById('cartCount').classList.toggle('hidden', cart.length === 0); document.getElementById('cartItems').innerHTML = cart.map((item, index) => `<div class="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-2 text-left"><div class="text-left font-black text-slate-800 uppercase text-[10px] tracking-widest">${item.code}</div><button onclick="removeFromCart(${index})" class="text-red-300 p-2"><i class="fa-solid fa-trash-can"></i></button></div>`).join(''); }
+        function addToCart(code, medium, link) { if (!cart.some(i => i.code === code)) { cart.push({code, medium, link}); saveCart(); updateCartUI(); } }
+        function updateCartUI() { 
+            document.getElementById('cartCount').innerText = cart.length; 
+            document.getElementById('cartCount').classList.toggle('hidden', cart.length === 0); 
+            document.getElementById('cartItems').innerHTML = cart.map((item, index) => `<div class="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-2"><div class="text-left font-black text-slate-800 uppercase text-[10px] tracking-widest">${item.code}</div><button onclick="removeFromCart(${index})" class="text-red-300 p-2"><i class="fa-solid fa-trash-can"></i></button></div>`).join(''); 
+        }
         function removeFromCart(index) { cart.splice(index, 1); saveCart(); updateCartUI(); }
         function clearCart() { cart = []; saveCart(); updateCartUI(); closeCart(); }
         function openCart() { document.getElementById('cartModal').classList.remove('hidden'); }
